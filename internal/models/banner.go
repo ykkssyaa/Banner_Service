@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"time"
+)
 
 type ModelMap map[string]interface{}
 
@@ -21,4 +25,20 @@ type Banner struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Дата обновления баннера
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+}
+
+func (m ModelMap) String() string {
+	data, err := json.Marshal(m)
+	if err != nil {
+		panic(err.Error())
+	}
+	return string(data)
+}
+
+func (m ModelMap) Value() (driver.Value, error) {
+	return json.Marshal(m)
+}
+
+func (m ModelMap) Scan(data []byte) error {
+	return json.Unmarshal(data, &m)
 }
