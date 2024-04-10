@@ -1,12 +1,13 @@
 package server
 
 import (
+	"BannerService/internal/service"
 	"net/http"
 	"time"
 )
 
 type HttpServer struct {
-	//	services *service.Services
+	services *service.Services
 }
 
 func NewHttpServer(addr string) *http.Server {

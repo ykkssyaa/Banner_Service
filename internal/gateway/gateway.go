@@ -5,12 +5,12 @@ import (
 )
 
 type Gateways struct {
-	BannerGateway
+	Banner
 }
 
 func NewGateway(db *sqlx.DB) *Gateways {
 	return &Gateways{NewBannerPostgres(db)}
 }
 
-type BannerGateway interface {
+type Banner interface {
 }
