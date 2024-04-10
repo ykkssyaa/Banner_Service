@@ -8,10 +8,11 @@ import (
 
 type HttpServer struct {
 	services *service.Services
+	//logger   *logger.Logger
 }
 
-func NewHttpServer(addr string) *http.Server {
-	server := &HttpServer{}
+func NewHttpServer(addr string, services *service.Services) *http.Server {
+	server := &HttpServer{services: services}
 
 	r := NewRouter(server)
 
