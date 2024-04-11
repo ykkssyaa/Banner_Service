@@ -1,6 +1,6 @@
 package consts
 
 const (
-	AdminToken = "adminToken"
-	UserToken  = "userToken"
+	AdminRole = "admin"
+	UserRole  = "user"
 )

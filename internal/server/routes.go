@@ -16,8 +16,8 @@ type Route struct {
 }
 
 type Routes struct {
-	routesList    []Route
-	allowedTokens []string
+	routesList   []Route
+	allowedRoles []string
 }
 
 // createSubRouter Создание ветки роутов со своим middleware
@@ -26,7 +26,7 @@ func createSubRouter(router *mux.Router, routes Routes) {
 	subRouter := router.PathPrefix("/").Subrouter()
 
 	// Применяем middleware для подроутера
-	subRouter.Use(middleware.TokenMiddleware(routes.allowedTokens...))
+	subRouter.Use(middleware.TokenMiddleware(routes.allowedRoles...))
 
 	for _, route := range routes.routesList {
 		var handler http.Handler
@@ -74,7 +74,7 @@ func NewRouter(server *HttpServer) *mux.Router {
 				server.BannerPost,
 			},
 		},
-		[]string{consts.AdminToken},
+		[]string{consts.AdminRole},
 	}
 	var userRoutes = Routes{
 		[]Route{
@@ -86,8 +86,8 @@ func NewRouter(server *HttpServer) *mux.Router {
 			},
 		},
 		[]string{
-			consts.AdminToken,
-			consts.UserToken,
+			consts.AdminRole,
+			consts.UserRole,
 		},
 	}
 
