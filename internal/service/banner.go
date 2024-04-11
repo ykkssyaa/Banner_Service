@@ -4,6 +4,8 @@ import (
 	"BannerService/internal/gateway"
 	"BannerService/internal/models"
 	sErr "BannerService/pkg/serverError"
+	"database/sql"
+	"errors"
 	"net/http"
 )
 
@@ -54,4 +56,32 @@ func (p *BannerService) GetBanner(tagId, featureId, limit, offset int32) ([]mode
 
 	return res, nil
 
+}
+
+func (p *BannerService) DeleteBanner(id int32) error {
+
+	if id <= 0 {
+		return sErr.ServerError{
+			Message:    "Bad Request: wrong id value",
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	err := p.repo.DeleteBanner(id)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return sErr.ServerError{
+				Message:    "",
+				StatusCode: http.StatusNotFound,
+			}
+		} else {
+			return sErr.ServerError{
+				Message:    "Error with deleting banner",
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
+	}
+
+	return nil
 }

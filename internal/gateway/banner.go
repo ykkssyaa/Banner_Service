@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"BannerService/internal/models"
+	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 )
@@ -108,4 +109,33 @@ func (p *BannerPostgres) GetBanner(tagId, featureId, limit, offset int32) ([]mod
 	}
 
 	return res, nil
+}
+
+func (p *BannerPostgres) DeleteBanner(id int32) error {
+
+	tx, err := p.db.Begin()
+
+	result, err := tx.Exec("DELETE FROM banners WHERE id = $1", id)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	_, err = tx.Exec("DELETE FROM tags_banners WHERE banner_id = $1", id)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
