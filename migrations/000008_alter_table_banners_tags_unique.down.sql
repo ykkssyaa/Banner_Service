@@ -1,0 +1,1 @@
+ALTER TABLE tags_banners DROP CONSTRAINT pk_tags_banners_all;
