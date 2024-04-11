@@ -20,3 +20,24 @@ CREATE OR REPLACE TRIGGER uniq_feature_tag_of_banner
 BEFORE INSERT ON tags_banners
 FOR EACH ROW
 EXECUTE FUNCTION check_uniq_feature_tag();
+
+
+CREATE OR REPLACE FUNCTION check_unique_feature_tags_update() RETURNS trigger AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM tags_banners tb
+        JOIN banners b ON tb.banner_id = b.id
+        WHERE tb.tag_id IN (SELECT tag_id FROM tags_banners WHERE banner_id = NEW.id AND banner_version = NEW.version)
+          AND b.feature_id = NEW.feature_id
+          AND tb.banner_id <> NEW.id AND tb.banner_version = NEW.version
+    ) THEN
+        RAISE EXCEPTION 'Another banner with the same feature and tags already exists.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_unique_feature_tags_trigger_update
+BEFORE UPDATE OF feature_id ON banners
+FOR EACH ROW
+EXECUTE FUNCTION check_unique_feature_tags_update();
