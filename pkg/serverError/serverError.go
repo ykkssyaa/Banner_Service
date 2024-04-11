@@ -30,12 +30,14 @@ func ErrorResponse(w http.ResponseWriter, err error) {
 
 	message = err.Error()
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatusCode)
 
-	resp := make(map[string]string)
+	if message != "" {
+		w.Header().Set("Content-Type", "application/json")
+		resp := make(map[string]string)
+		resp["error"] = message
+		jsonResp, _ := json.Marshal(resp)
+		w.Write(jsonResp)
+	}
 
-	resp["error"] = message
-	jsonResp, _ := json.Marshal(resp)
-	w.Write(jsonResp)
 }
