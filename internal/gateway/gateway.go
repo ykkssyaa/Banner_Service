@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"BannerService/internal/models"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -13,4 +14,6 @@ func NewGateway(db *sqlx.DB) *Gateways {
 }
 
 type Banner interface {
+	CreateBanner(banner models.Banner) (int, error)
+	GetBanner(tagId, featureId, limit, offset int32) ([]models.Banner, error)
 }

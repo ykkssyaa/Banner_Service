@@ -1,6 +1,9 @@
 package service
 
-import "BannerService/internal/gateway"
+import (
+	"BannerService/internal/gateway"
+	"BannerService/internal/models"
+)
 
 type Services struct {
 	Banner
@@ -13,4 +16,6 @@ func NewService(gateways *gateway.Gateways) *Services {
 }
 
 type Banner interface {
+	CreateBanner(banner models.Banner) (int, error)
+	GetBanner(tagId, featureId, limit, offset int32) ([]models.Banner, error)
 }
