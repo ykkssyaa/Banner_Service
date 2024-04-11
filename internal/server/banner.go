@@ -76,6 +76,49 @@ func (s *HttpServer) BannerIdDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HttpServer) BannerIdPatch(w http.ResponseWriter, r *http.Request) {
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		sErr.ErrorResponse(w, sErr.ServerError{
+			Message:    "Content Type is not application/json",
+			StatusCode: http.StatusUnsupportedMediaType,
+		})
+		return
+	}
+
+	id, err := UrlArgToInt32(w, mux.Vars(r)["id"])
+	if err != nil {
+		return
+	}
+
+	var banner models.Banner
+	var unmarshalErr *json.UnmarshalTypeError
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&banner)
+
+	if err != nil {
+		if errors.As(err, &unmarshalErr) {
+			sErr.ErrorResponse(w, sErr.ServerError{
+				Message:    "Bad Request. Wrong Type provided for field " + unmarshalErr.Field,
+				StatusCode: http.StatusBadRequest,
+			})
+		} else {
+			sErr.ErrorResponse(w, sErr.ServerError{
+				Message:    "Bad Request " + err.Error(),
+				StatusCode: http.StatusBadRequest,
+			})
+		}
+		return
+	}
+
+	banner.Id = id
+
+	if err := s.services.PatchBanner(banner); err != nil {
+		sErr.ErrorResponse(w, err)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 }

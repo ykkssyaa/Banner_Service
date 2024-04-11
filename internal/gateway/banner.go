@@ -23,12 +23,22 @@ func (p *BannerPostgres) CreateBanner(banner models.Banner) (int, error) {
 	}
 
 	var id int
+	if banner.Id == 0 {
 
-	createQuery := "INSERT INTO banners (version, feature_id, content, is_active) VALUES ($1, $2, $3, $4) RETURNING id"
-	row := tx.QueryRow(createQuery, banner.Version, banner.FeatureId, banner.Content, banner.IsActive)
-	if err := row.Scan(&id); err != nil {
-		tx.Rollback()
-		return 0, err
+		createQuery := "INSERT INTO banners (version, feature_id, content, is_active) VALUES ($1, $2, $3, $4) RETURNING id"
+		row := tx.QueryRow(createQuery, banner.Version, banner.FeatureId, banner.Content, banner.IsActive)
+		if err := row.Scan(&id); err != nil {
+			tx.Rollback()
+			return 0, err
+		}
+	} else {
+		createQuery := "INSERT INTO banners (id, version, feature_id, content, is_active, created_at) VALUES ($1, $2, $3, $4, $5, $6)"
+		_, err := tx.Exec(createQuery, banner.Id, banner.Version, banner.FeatureId, banner.Content, banner.IsActive, banner.CreatedAt)
+		if err != nil {
+			tx.Rollback()
+			return 0, err
+		}
+		id = int(banner.Id)
 	}
 
 	createTagsRelQuery := "INSERT INTO tags_banners (banner_id, banner_version, tag_id) VALUES ($1, $2, $3)"
@@ -48,15 +58,11 @@ func (p *BannerPostgres) GetBanner(tagId, featureId, limit, offset int32) ([]mod
 	var args []interface{}
 
 	query = `
-        SELECT 
-            b.id, b.version, b.feature_id, b.content, b.is_active, b.created_at, b.update_at, 
+        SELECT b.id, b.version, b.feature_id, b.content, b.is_active, b.created_at, b.update_at, 
             ARRAY_AGG(tb.tag_id) AS tag_ids
-        FROM 
-            Banners b
-        JOIN 
-            tags_banners tb ON b.id = tb.banner_id AND b.version = tb.banner_version
-        WHERE 
-            1=1
+        FROM Banners b
+        JOIN tags_banners tb ON b.id = tb.banner_id AND b.version = tb.banner_version
+        WHERE 1=1
     `
 
 	if featureId != 0 {
@@ -69,8 +75,7 @@ func (p *BannerPostgres) GetBanner(tagId, featureId, limit, offset int32) ([]mod
 	}
 
 	query += `
-        GROUP BY 
-            b.id, b.version, b.feature_id, b.content, b.is_active, b.created_at, b.update_at
+        GROUP BY b.id, b.version, b.feature_id, b.content, b.is_active, b.created_at, b.update_at
     `
 
 	if limit != 0 {
@@ -82,24 +87,17 @@ func (p *BannerPostgres) GetBanner(tagId, featureId, limit, offset int32) ([]mod
 		args = append(args, offset)
 	}
 
-	// Создаем запрос для получения всех тегов для каждого баннера
 	subQuery := `
-        SELECT 
-            banner_id, ARRAY_AGG(tag_id) AS tag_ids
-        FROM 
-            tags_banners
-        GROUP BY 
-            banner_id
+        SELECT banner_id, banner_version, ARRAY_AGG(tag_id) AS tag_ids
+        FROM tags_banners
+        GROUP BY banner_id, banner_version
     `
 
-	// Добавляем подзапрос в основной запрос
 	query = fmt.Sprintf(`
-        SELECT 
-            b.*, t.tag_ids
-        FROM 
-            (%s) AS b
-        JOIN 
-            (%s) AS t ON b.id = t.banner_id
+        SELECT  b.*, t.tag_ids
+        FROM (%s) AS b
+        JOIN (%s) AS t ON b.id = t.banner_id AND b.version = t.banner_version
+        ORDER BY b.id, b.version
     `, query, subQuery)
 
 	res := make([]models.Banner, 0, limit)
@@ -111,9 +109,24 @@ func (p *BannerPostgres) GetBanner(tagId, featureId, limit, offset int32) ([]mod
 	return res, nil
 }
 
+func (p *BannerPostgres) GetBannerById(id int32) (models.Banner, error) {
+	var banner models.Banner
+
+	err := p.db.Get(&banner, "SELECT * FROM banners WHERE id = $1 ORDER BY version desc LIMIT 1;", id)
+	if err != nil {
+		return models.Banner{}, err
+	}
+
+	return banner, nil
+}
+
 func (p *BannerPostgres) DeleteBanner(id int32) error {
 
 	tx, err := p.db.Begin()
+
+	if err != nil {
+		return err
+	}
 
 	result, err := tx.Exec("DELETE FROM banners WHERE id = $1", id)
 	if err != nil {

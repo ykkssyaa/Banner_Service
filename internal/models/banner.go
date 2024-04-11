@@ -64,6 +64,23 @@ func (m ModelMap) Scan(data interface{}) error {
 	return nil
 }
 
+func (m ModelMap) Equal(other ModelMap) bool {
+	if len(m) != len(other) {
+		return false
+	}
+	for key, val := range m {
+		if v, ok := other[key]; !ok {
+			return false
+		} else {
+			if v != val {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
 func (t *Tags) Scan(src interface{}) error {
 	if src == nil {
 		return nil
@@ -106,4 +123,16 @@ func (t *Tags) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return json.Marshal(*t)
+}
+
+func (t *Tags) Equal(other Tags) bool {
+	if len(*t) != len(other) {
+		return false
+	}
+	for i, val := range *t {
+		if val != other[i] {
+			return false
+		}
+	}
+	return true
 }
