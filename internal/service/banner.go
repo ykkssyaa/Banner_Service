@@ -1,6 +1,7 @@
 package service
 
 import (
+	"BannerService/internal/consts"
 	"BannerService/internal/gateway"
 	"BannerService/internal/models"
 	sErr "BannerService/pkg/serverError"
@@ -166,4 +167,39 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 	}
 
 	return nil
+}
+
+func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLastRevision bool) (models.Banner, error) {
+
+	if tagId <= 0 {
+		return models.Banner{}, sErr.ServerError{
+			Message:    "Bad Request: wrong tag_id value",
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+	if featureId <= 0 {
+		return models.Banner{}, sErr.ServerError{
+			Message:    "Bad Request: wrong feature_id value",
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	// TODO: Кеширование
+
+	banners, err := p.repo.GetBanner(tagId, featureId, 1, 0)
+	if err != nil {
+		return models.Banner{}, sErr.ServerError{
+			Message:    "Error with getting banner",
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	if len(banners) == 0 || (!banners[0].IsActive && role != consts.AdminRole) {
+		return models.Banner{}, sErr.ServerError{
+			Message:    "",
+			StatusCode: http.StatusNotFound,
+		}
+	}
+
+	return banners[0], nil
 }

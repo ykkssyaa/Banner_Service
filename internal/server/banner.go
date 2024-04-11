@@ -167,6 +167,26 @@ func (s *HttpServer) BannerPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HttpServer) UserBannerGet(w http.ResponseWriter, r *http.Request) {
+
+	featureId, err := UrlArgToInt32(w, r.URL.Query().Get("feature_id"))
+	if err != nil {
+		return
+	}
+	tagId, err := UrlArgToInt32(w, r.URL.Query().Get("tag_id"))
+	if err != nil {
+		return
+	}
+
+	useLastRevision := r.URL.Query().Get("use_last_revision") == "true"
+	role := r.Context().Value("role").(string)
+
+	banner, err := s.services.GetUserBanner(tagId, featureId, role, useLastRevision)
+	if err != nil {
+		sErr.ErrorResponse(w, err)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(banner)
 }

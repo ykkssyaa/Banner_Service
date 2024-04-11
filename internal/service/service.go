@@ -18,6 +18,7 @@ func NewService(gateways *gateway.Gateways) *Services {
 type Banner interface {
 	CreateBanner(banner models.Banner) (int, error)
 	GetBanner(tagId, featureId, limit, offset int32) ([]models.Banner, error)
+	GetUserBanner(tagId, featureId int32, role string, useLastRevision bool) (models.Banner, error)
 	DeleteBanner(id int32) error
 	PatchBanner(banner models.Banner) error
 }
