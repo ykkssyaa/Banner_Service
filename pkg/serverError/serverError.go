@@ -24,8 +24,11 @@ func ErrorResponse(w http.ResponseWriter, err error) {
 	ok := errors.As(err, &serverError)
 	if !ok {
 		httpStatusCode = http.StatusInternalServerError
-		message = err.Error()
+	} else {
+		httpStatusCode = serverError.StatusCode
 	}
+
+	message = err.Error()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatusCode)
