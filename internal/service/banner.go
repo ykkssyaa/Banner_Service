@@ -123,7 +123,8 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 		}
 	}
 
-	oldBanner, err := p.repo.GetBannerById(banner.Id)
+	banners, err := p.repo.GetBannersById(banner.Id, true)
+	oldBanner := banners[0]
 	if err != nil {
 
 		if err.Error() == "sql: no rows in result set" {
@@ -245,4 +246,58 @@ func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLa
 	}
 
 	return banner, nil
+}
+
+func (p *BannerService) GetBannerVersions(id int32) ([]models.Banner, error) {
+
+	if id <= 0 {
+		return nil, sErr.ServerError{
+			Message:    "Bad Request: wrong id value",
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	banners, err := p.repo.GetBannersById(id, false)
+	if err != nil {
+		return nil, sErr.ServerError{
+			Message:    "Error with getting banners",
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	return banners, nil
+}
+
+func (p *BannerService) SetBannerVersion(id, version int32) error {
+
+	if id <= 0 {
+		return sErr.ServerError{
+			Message:    "Bad Request: wrong id value",
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	if version <= 0 {
+		return sErr.ServerError{
+			Message:    "Bad Request: wrong version value",
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	err := p.repo.SetActiveVersion(id, version, true)
+
+	if err != nil {
+		if err.Error() == "error: No rows affected" {
+			return sErr.ServerError{
+				Message:    "Bad Request: there is not banner with this id and version",
+				StatusCode: http.StatusBadRequest,
+			}
+		}
+		return sErr.ServerError{
+			Message:    "Internal server error with updating active version",
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	return nil
 }

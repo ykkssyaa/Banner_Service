@@ -192,11 +192,40 @@ func (s *HttpServer) UserBannerGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HttpServer) GetBannerVersions(w http.ResponseWriter, r *http.Request) {
+
+	id, err := UrlArgToInt32(w, mux.Vars(r)["id"])
+	if err != nil {
+		return
+	}
+
+	banners, err := s.services.GetBannerVersions(id)
+	if err != nil {
+		sErr.ErrorResponse(w, err)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(banners)
 }
 
 func (s *HttpServer) SetBannerVersion(w http.ResponseWriter, r *http.Request) {
+
+	id, err := UrlArgToInt32(w, mux.Vars(r)["id"])
+	if err != nil {
+		return
+	}
+	version, err := UrlArgToInt32(w, r.URL.Query().Get("version"))
+	if err != nil {
+		return
+	}
+
+	err = s.services.SetBannerVersion(id, version)
+	if err != nil {
+		sErr.ErrorResponse(w, err)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 }

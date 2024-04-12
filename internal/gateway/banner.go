@@ -3,6 +3,7 @@ package gateway
 import (
 	"BannerService/internal/models"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 )
@@ -116,15 +117,27 @@ func (p *BannerPostgres) GetBanner(tagId, featureId, limit, offset int32, isActi
 	return res, nil
 }
 
-func (p *BannerPostgres) GetBannerById(id int32) (models.Banner, error) {
-	var banner models.Banner
+func (p *BannerPostgres) GetBannersById(id int32, getLast bool) ([]models.Banner, error) {
+	var banners []models.Banner
 
-	err := p.db.Get(&banner, "SELECT * FROM banners WHERE id = $1 ORDER BY version desc LIMIT 1;", id)
-	if err != nil {
-		return models.Banner{}, err
+	query := `SELECT b.id, b.version, b.feature_id, b.content, b.is_active, b.created_at, b.update_at, 
+            ARRAY_AGG(tb.tag_id) AS tag_ids
+       			FROM banners b
+       			JOIN public.tags_banners tb on b.id = tb.banner_id and b.version = tb.banner_version
+				WHERE id = $1  
+				GROUP BY b.id, b.version, b.feature_id, b.content, b.is_active, b.created_at, b.update_at
+				ORDER BY version desc`
+
+	if getLast {
+		query += " LIMIT 1"
 	}
 
-	return banner, nil
+	err := p.db.Select(&banners, query, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return banners, nil
 }
 
 func (p *BannerPostgres) DeleteBanner(id int32) error {
@@ -176,8 +189,13 @@ func (p *BannerPostgres) SetActiveVersion(id, version int32, isActive bool) erro
 		return err
 	}
 
-	_, err = tx.Exec("UPDATE banners SET is_active = $1 WHERE id = $2 AND version = $3",
+	res, err := tx.Exec("UPDATE banners SET is_active = $1 WHERE id = $2 AND version = $3",
 		isActive, id, version)
+
+	if count, err := res.RowsAffected(); err != nil || count == 0 {
+		tx.Rollback()
+		return errors.New("error: No rows affected")
+	}
 
 	if err != nil {
 		tx.Rollback()
