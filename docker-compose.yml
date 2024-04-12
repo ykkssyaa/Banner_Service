@@ -2,9 +2,23 @@ services:
   postgres:
     image: postgres:16
     container_name: postgres_banner
+    restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_DBNAME}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - ${POSTGRES_PORT}:${POSTGRES_PORT}
+
+  redis:
+    image: redis:7.2
+    container_name: redis_banner
+    restart: always
+    ports:
+      -  ${REDIS_PORT}:${REDIS_PORT}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASES=1
+    volumes:
+      - ./redis-data:/var/lib/redis
+        - ./redis.conf:/usr/local/etc/redis/redis.conf

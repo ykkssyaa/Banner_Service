@@ -27,8 +27,18 @@ func main() {
 		logger.Err.Fatalf(err.Error())
 	}
 
+	logger.Info.Print("Connecting to Redis.")
+	redisCl, err := gateway.NewRedisClient(
+		viper.GetString("REDIS_HOST"),
+		viper.GetString("REDIS_PORT"),
+		viper.GetString("REDIS_PASSWORD"))
+
+	if err != nil {
+		logger.Err.Fatalf(err.Error())
+	}
+
 	logger.Info.Print("Creating Gateways.")
-	gateways := gateway.NewGateway(db)
+	gateways := gateway.NewGateway(db, redisCl)
 
 	logger.Info.Print("Creating Services.")
 	services := service.NewService(gateways)

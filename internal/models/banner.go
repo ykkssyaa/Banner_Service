@@ -21,7 +21,7 @@ type Banner struct {
 	// Идентификаторы тэгов
 	TagIds Tags `json:"tag_ids,omitempty" db:"tag_ids"`
 	// Идентификатор фичи
-	FeatureId int `json:"feature_id,omitempty" db:"feature_id"`
+	FeatureId int32 `json:"feature_id,omitempty" db:"feature_id"`
 	// Содержимое баннера
 	Content ModelMap `json:"content,omitempty" db:"content"`
 	// Флаг активности баннера
