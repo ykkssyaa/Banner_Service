@@ -136,3 +136,27 @@ func (t *Tags) Equal(other Tags) bool {
 	}
 	return true
 }
+
+func (m ModelMap) MarshalBinary() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m *ModelMap) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, m)
+}
+
+func (t Tags) MarshalBinary() ([]byte, error) {
+	return json.Marshal(t)
+}
+
+func (t *Tags) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, t)
+}
+
+func (m Banner) MarshalBinary() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m *Banner) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, m)
+}

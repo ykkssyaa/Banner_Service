@@ -20,7 +20,7 @@ func (b BannerRedis) Get(tagId, featureId int32) (models.Banner, error) {
 	ctx := context.Background()
 	var banner models.Banner
 
-	err := b.cl.Get(ctx, GenKey(tagId, featureId)).Err()
+	err := b.cl.Get(ctx, GenKey(tagId, featureId)).Scan(&banner)
 	if err != nil {
 		return models.Banner{}, err
 	}

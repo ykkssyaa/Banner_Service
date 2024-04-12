@@ -11,7 +11,7 @@ type Services struct {
 
 func NewService(gateways *gateway.Gateways) *Services {
 	return &Services{
-		Banner: NewBannerService(gateways.Banner),
+		Banner: NewBannerService(gateways.Banner, gateways.BannerCache),
 	}
 }
 

@@ -12,11 +12,12 @@ import (
 )
 
 type BannerService struct {
-	repo gateway.Banner
+	repo  gateway.Banner
+	cache gateway.BannerCache
 }
 
-func NewBannerService(repo gateway.Banner) *BannerService {
-	return &BannerService{repo: repo}
+func NewBannerService(repo gateway.Banner, cache gateway.BannerCache) *BannerService {
+	return &BannerService{repo: repo, cache: cache}
 }
 
 func (p *BannerService) CreateBanner(banner models.Banner) (int, error) {
@@ -201,8 +202,6 @@ func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLa
 		}
 	}
 
-	// TODO: Кеширование
-
 	isActive := new(bool)
 	if role != consts.AdminRole {
 		*isActive = true
@@ -210,20 +209,38 @@ func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLa
 		isActive = nil
 	}
 
-	banners, err := p.repo.GetBanner(tagId, featureId, 1, 0, isActive)
-	if err != nil {
-		return models.Banner{}, sErr.ServerError{
-			Message:    "Error with getting banner",
-			StatusCode: http.StatusInternalServerError,
+	var banner models.Banner
+	if !useLastRevision {
+
+		cachedBanner, err := p.cache.Get(tagId, featureId)
+		if err != nil {
+			// TODO: Не нарушаем работу программы, нужно логгировать об ошибке
+		}
+		banner = cachedBanner
+	}
+
+	if banner.Id == 0 { // Banner there are not in cache
+		banners, err := p.repo.GetBanner(tagId, featureId, 1, 0, isActive)
+		if err != nil {
+			return models.Banner{}, sErr.ServerError{
+				Message:    "Error with getting banner",
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
+
+		if len(banners) == 0 {
+			return models.Banner{}, sErr.ServerError{
+				Message:    "",
+				StatusCode: http.StatusNotFound,
+			}
+		}
+
+		banner = banners[0]
+
+		if err := p.cache.Set(banner); err != nil {
+			// TODO: Не нарушаем работу программы, нужно логгировать об ошибке
 		}
 	}
 
-	if len(banners) == 0 {
-		return models.Banner{}, sErr.ServerError{
-			Message:    "",
-			StatusCode: http.StatusNotFound,
-		}
-	}
-
-	return banners[0], nil
+	return banner, nil
 }
