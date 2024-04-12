@@ -73,6 +73,18 @@ func NewRouter(server *HttpServer) *mux.Router {
 				"/banner",
 				server.BannerPost,
 			},
+			{
+				"GetBannerVersions",
+				strings.ToUpper("Get"),
+				"/banner/{id}",
+				server.GetBannerVersions,
+			},
+			{
+				"SetBannerVersion",
+				strings.ToUpper("Post"),
+				"/banner/{id}",
+				server.SetBannerVersion,
+			},
 		},
 		[]string{consts.AdminRole},
 	}

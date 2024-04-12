@@ -327,3 +327,129 @@ paths:
                 properties:
                   error:
                     type: string
+    post:
+      summary: Выбор активной версии баннера
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            description: Идентификатор баннера
+        - in: header
+          name: token
+          description: Токен админа
+          schema:
+            type: string
+            example: "admin_token"
+        - in: query
+          name: version
+          required: true
+          schema:
+            type: integer
+            description: Версия баннера
+
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '401':
+          description: Пользователь не авторизован
+        '403':
+          description: Пользователь не имеет доступа
+        '404':
+          description: Баннер не найден
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+    get:
+      summary: Получение всех версий баннера
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            description: Идентификатор баннера
+        - in: header
+          name: token
+          description: Токен админа
+          schema:
+            type: string
+            example: "admin_token"
+
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    banner_id:
+                      type: integer
+                      description: Идентификатор баннера
+                    tag_ids:
+                      type: array
+                      description: Идентификаторы тэгов
+                      items:
+                        type: integer
+                    feature_id:
+                      type: integer
+                      description: Идентификатор фичи
+                    content:
+                      type: object
+                      description: Содержимое баннера
+                      additionalProperties: true
+                      example: '{"title": "some_title", "text": "some_text", "url": "some_url"}'
+                    is_active:
+                      type: boolean
+                      description: Флаг активности баннера
+                    created_at:
+                      type: string
+                      format: date-time
+                      description: Дата создания баннера
+                    updated_at:
+                      type: string
+                      format: date-time
+                      description: Дата обновления баннера
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '401':
+          description: Пользователь не авторизован
+        '403':
+          description: Пользователь не имеет доступа
+        '404':
+          description: Баннер не найден
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
