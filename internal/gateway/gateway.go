@@ -11,10 +11,10 @@ type Gateways struct {
 	BannerCache
 }
 
-func NewGateway(db *sqlx.DB, redisCl *redis.Client) *Gateways {
+func NewGateway(db *sqlx.DB, redisCl *redis.Client, CacheOn bool) *Gateways {
 	return &Gateways{
 		Banner:      NewBannerPostgres(db),
-		BannerCache: NewBannerRedis(redisCl),
+		BannerCache: NewBannerRedis(redisCl, CacheOn),
 	}
 }
 

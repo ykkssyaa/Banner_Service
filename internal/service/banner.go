@@ -125,15 +125,17 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 
 	oldBanner, err := p.repo.GetBannerById(banner.Id)
 	if err != nil {
+
+		if err.Error() == "sql: no rows in result set" {
+			return sErr.ServerError{
+				Message:    "",
+				StatusCode: http.StatusNotFound,
+			}
+		}
+
 		return sErr.ServerError{
 			Message:    "Error with getting banner",
 			StatusCode: http.StatusInternalServerError,
-		}
-	}
-	if oldBanner.Id == 0 {
-		return sErr.ServerError{
-			Message:    "",
-			StatusCode: http.StatusNotFound,
 		}
 	}
 

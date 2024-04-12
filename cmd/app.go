@@ -37,8 +37,12 @@ func main() {
 		logger.Err.Fatalf(err.Error())
 	}
 
+	CacheON := viper.GetString("CACHE_ON")
+
+	logger.Info.Print("CACHE_ON = " + CacheON)
+
 	logger.Info.Print("Creating Gateways.")
-	gateways := gateway.NewGateway(db, redisCl)
+	gateways := gateway.NewGateway(db, redisCl, CacheON == "true")
 
 	logger.Info.Print("Creating Services.")
 	services := service.NewService(gateways)
