@@ -53,7 +53,7 @@ func (p *BannerPostgres) CreateBanner(banner models.Banner) (int, error) {
 	return id, tx.Commit()
 }
 
-func (p *BannerPostgres) GetBanner(tagId, featureId, limit, offset int32) ([]models.Banner, error) {
+func (p *BannerPostgres) GetBanner(tagId, featureId, limit, offset int32, isActive *bool) ([]models.Banner, error) {
 	var query string
 	var args []interface{}
 
@@ -62,7 +62,10 @@ func (p *BannerPostgres) GetBanner(tagId, featureId, limit, offset int32) ([]mod
             ARRAY_AGG(tb.tag_id) AS tag_ids
         FROM Banners b
         JOIN tags_banners tb ON b.id = tb.banner_id AND b.version = tb.banner_version
-        WHERE 1=1
+        WHERE ((b.version) IN (
+             SELECT MAX(version)
+             FROM Banners
+             WHERE id = b.id) OR b.is_active)
     `
 
 	if featureId != 0 {
@@ -72,6 +75,10 @@ func (p *BannerPostgres) GetBanner(tagId, featureId, limit, offset int32) ([]mod
 	if tagId != 0 {
 		query += fmt.Sprintf(" AND tb.tag_id = $%d", len(args)+1)
 		args = append(args, tagId)
+	}
+	if isActive != nil {
+		query += fmt.Sprintf(" AND b.is_active = $%d", len(args)+1)
+		args = append(args, *isActive)
 	}
 
 	query += `
@@ -97,7 +104,7 @@ func (p *BannerPostgres) GetBanner(tagId, featureId, limit, offset int32) ([]mod
         SELECT  b.*, t.tag_ids
         FROM (%s) AS b
         JOIN (%s) AS t ON b.id = t.banner_id AND b.version = t.banner_version
-        ORDER BY b.id, b.version
+        ORDER BY b.id , b.version desc 
     `, query, subQuery)
 
 	res := make([]models.Banner, 0, limit)
@@ -145,6 +152,33 @@ func (p *BannerPostgres) DeleteBanner(id int32) error {
 	}
 
 	_, err = tx.Exec("DELETE FROM tags_banners WHERE banner_id = $1", id)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (p *BannerPostgres) SetActiveVersion(id, version int32, isActive bool) error {
+
+	tx, err := p.db.Begin()
+
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("UPDATE banners SET is_active = $1 WHERE id = $2 AND version != $3",
+		false, id, version)
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = tx.Exec("UPDATE banners SET is_active = $1 WHERE id = $2 AND version = $3",
+		isActive, id, version)
+
 	if err != nil {
 		tx.Rollback()
 		return err

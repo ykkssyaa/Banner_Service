@@ -25,7 +25,7 @@ type Banner struct {
 	// Содержимое баннера
 	Content ModelMap `json:"content,omitempty" db:"content"`
 	// Флаг активности баннера
-	IsActive bool `json:"is_active,omitempty" db:"is_active"`
+	IsActive *bool `json:"is_active,omitempty" db:"is_active"`
 	// Дата создания баннера
 	CreatedAt time.Time `json:"created_at,omitempty" db:"created_at"`
 	// Дата обновления баннера

@@ -73,7 +73,7 @@ func (p *BannerService) GetBanner(tagId, featureId, limit, offset int32) ([]mode
 		offset = 0
 	}
 
-	res, err := p.repo.GetBanner(tagId, featureId, limit, offset)
+	res, err := p.repo.GetBanner(tagId, featureId, limit, offset, nil)
 	if err != nil {
 		return nil, sErr.ServerError{
 			Message:    "Error with getting banner",
@@ -122,13 +122,6 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 		}
 	}
 
-	if banner.FeatureId == 0 && len(banner.TagIds) == 0 && len(banner.Content) == 0 {
-		return sErr.ServerError{
-			Message:    "Bad Request: nothing to update",
-			StatusCode: http.StatusBadRequest,
-		}
-	}
-
 	oldBanner, err := p.repo.GetBannerById(banner.Id)
 	if err != nil {
 		return sErr.ServerError{
@@ -143,26 +136,50 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 		}
 	}
 
-	if oldBanner.FeatureId != banner.FeatureId && banner.FeatureId != 0 {
-		oldBanner.FeatureId = banner.FeatureId
+	// Если изменился только статус активности
+	if banner.FeatureId == 0 && len(banner.TagIds) == 0 && len(banner.Content) == 0 &&
+		banner.IsActive != nil && *banner.IsActive != *oldBanner.IsActive {
+
+		err = p.repo.SetActiveVersion(oldBanner.Id, oldBanner.Version, *banner.IsActive)
+	} else {
+
+		if banner.FeatureId != 0 {
+			oldBanner.FeatureId = banner.FeatureId
+		}
+
+		if len(banner.TagIds) != 0 {
+			oldBanner.TagIds = make(models.Tags, len(banner.TagIds))
+			copy(oldBanner.TagIds, banner.TagIds)
+		}
+
+		if len(banner.Content) != 0 {
+			oldBanner.Content = banner.Content
+		}
+
+		oldBanner.Version = oldBanner.Version + 1
+
+		_, err = p.repo.CreateBanner(oldBanner)
+		if err != nil {
+			return sErr.ServerError{
+				Message:    "Error with updating ",
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
+
+		var isActive bool
+		if banner.IsActive == nil {
+			isActive = *oldBanner.IsActive
+		} else {
+			isActive = *banner.IsActive
+		}
+
+		err = p.repo.SetActiveVersion(oldBanner.Id, oldBanner.Version, isActive)
 	}
 
-	if !oldBanner.TagIds.Equal(banner.TagIds) && len(banner.TagIds) != 0 {
-		oldBanner.TagIds = make(models.Tags, len(banner.TagIds))
-		copy(oldBanner.TagIds, banner.TagIds)
-	}
-
-	if !oldBanner.Content.Equal(banner.Content) && len(banner.Content) != 0 {
-		oldBanner.Content = banner.Content
-	}
-
-	oldBanner.Version = oldBanner.Version + 1
-
-	_, err = p.repo.CreateBanner(oldBanner)
 	if err != nil {
 		return sErr.ServerError{
-			Message:    "Error with updating ",
-			StatusCode: http.StatusBadRequest,
+			Message:    "Error with updating is_active status",
+			StatusCode: http.StatusInternalServerError,
 		}
 	}
 
@@ -186,7 +203,14 @@ func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLa
 
 	// TODO: Кеширование
 
-	banners, err := p.repo.GetBanner(tagId, featureId, 1, 0)
+	isActive := new(bool)
+	if role != consts.AdminRole {
+		*isActive = true
+	} else {
+		isActive = nil
+	}
+
+	banners, err := p.repo.GetBanner(tagId, featureId, 1, 0, isActive)
 	if err != nil {
 		return models.Banner{}, sErr.ServerError{
 			Message:    "Error with getting banner",
@@ -194,7 +218,7 @@ func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLa
 		}
 	}
 
-	if len(banners) == 0 || (!banners[0].IsActive && role != consts.AdminRole) {
+	if len(banners) == 0 {
 		return models.Banner{}, sErr.ServerError{
 			Message:    "",
 			StatusCode: http.StatusNotFound,
