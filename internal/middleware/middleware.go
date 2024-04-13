@@ -7,9 +7,9 @@ import (
 )
 
 func ParseRole(token string) string {
-	if token == "userToken" {
+	if token == consts.UserToken {
 		return consts.UserRole
-	} else if token == "adminToken" {
+	} else if token == consts.AdminToken {
 		return consts.AdminRole
 	}
 	return ""

@@ -33,7 +33,7 @@ func ErrorResponse(w http.ResponseWriter, err error) {
 	w.WriteHeader(httpStatusCode)
 
 	if message != "" {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		resp := make(map[string]string)
 		resp["error"] = message
 		jsonResp, _ := json.Marshal(resp)
