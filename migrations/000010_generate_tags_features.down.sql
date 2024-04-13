@@ -1,0 +1,2 @@
+DELETE FROM features WHERE id <= 1000;
+DELETE FROM tags WHERE id <= 1000;
