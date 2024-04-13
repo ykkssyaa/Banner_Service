@@ -264,6 +264,12 @@ func (p *BannerService) GetBannerVersions(id int32) ([]models.Banner, error) {
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
+	if len(banners) == 0 {
+		return nil, sErr.ServerError{
+			Message:    "",
+			StatusCode: http.StatusNotFound,
+		}
+	}
 
 	return banners, nil
 }
