@@ -49,7 +49,7 @@ func main() {
 	gateways := gateway.NewGateway(db, redisCl, CacheON == "true")
 
 	logger.Info.Print("Creating Services.")
-	services := service.NewService(gateways)
+	services := service.NewService(gateways, logger)
 
 	logger.Info.Print("Creating server.")
 

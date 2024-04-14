@@ -1,8 +1,8 @@
 package gateway
 
 import (
+	"BannerService/internal/consts"
 	"BannerService/internal/models"
-	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
@@ -161,7 +161,7 @@ func (p *BannerPostgres) DeleteBanner(id int32) error {
 	}
 
 	if rowsAffected == 0 {
-		return sql.ErrNoRows
+		return errors.New(consts.ErrorNoRowsAffected)
 	}
 
 	_, err = tx.Exec("DELETE FROM tags_banners WHERE banner_id = $1", id)
@@ -194,7 +194,7 @@ func (p *BannerPostgres) SetActiveVersion(id, version int32, isActive bool) erro
 
 	if count, err := res.RowsAffected(); err != nil || count == 0 {
 		tx.Rollback()
-		return errors.New("error: No rows affected")
+		return errors.New(consts.ErrorNoRowsAffected)
 	}
 
 	if err != nil {

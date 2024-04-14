@@ -3,15 +3,16 @@ package service
 import (
 	"BannerService/internal/gateway"
 	"BannerService/internal/models"
+	"BannerService/pkg/logger"
 )
 
 type Services struct {
 	Banner
 }
 
-func NewService(gateways *gateway.Gateways) *Services {
+func NewService(gateways *gateway.Gateways, logger *logger.Logger) *Services {
 	return &Services{
-		Banner: NewBannerService(gateways.Banner, gateways.BannerCache),
+		Banner: NewBannerService(gateways.Banner, gateways.BannerCache, logger),
 	}
 }
 
