@@ -1,0 +1,74 @@
+services:
+  app:
+    build: ./
+    container_name: banner_service
+    ports:
+      - ${PORT}:${PORT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - banner
+
+
+  postgres:
+    image: postgres:16
+    container_name: postgres_banner
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DBNAME}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d postgres -U yks" ]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      banner:
+        aliases:
+          - database
+
+  migrate:
+    image: migrate/migrate
+    container_name: banner_migrate
+    volumes:
+      - ./migrations:/migrations
+    command: ["-path", "./migrations", "-database",  "postgres://yks:yksadm@database:5432/postgres?sslmode=disable", "up" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - banner
+
+  redis:
+    image: redis:7.2
+    container_name: redis_banner
+    restart: always
+    ports:
+      -  ${REDIS_PORT}:${REDIS_PORT}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASES=1
+    volumes:
+      - ./redis-data:/var/lib/redis
+        - ./redis.conf:/usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    networks:
+      banner:
+        aliases:
+          - redis
+
+
+networks:
+  banner:
