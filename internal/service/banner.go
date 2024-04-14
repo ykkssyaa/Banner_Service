@@ -4,6 +4,7 @@ import (
 	"BannerService/internal/consts"
 	"BannerService/internal/gateway"
 	"BannerService/internal/models"
+	lg "BannerService/pkg/logger"
 	sErr "BannerService/pkg/serverError"
 	"database/sql"
 	"errors"
@@ -12,12 +13,13 @@ import (
 )
 
 type BannerService struct {
-	repo  gateway.Banner
-	cache gateway.BannerCache
+	repo   gateway.Banner
+	cache  gateway.BannerCache
+	logger *lg.Logger
 }
 
-func NewBannerService(repo gateway.Banner, cache gateway.BannerCache) *BannerService {
-	return &BannerService{repo: repo, cache: cache}
+func NewBannerService(repo gateway.Banner, cache gateway.BannerCache, logger *lg.Logger) *BannerService {
+	return &BannerService{repo: repo, cache: cache, logger: logger}
 }
 
 func (p *BannerService) CreateBanner(banner models.Banner) (int, error) {
@@ -48,6 +50,7 @@ func (p *BannerService) CreateBanner(banner models.Banner) (int, error) {
 				}
 			}
 		} else {
+			p.logger.Err.Println(consts.ErrorCreatingBanner, err.Error())
 			return 0, sErr.ServerError{
 				Message:    consts.ErrorCreatingBanner,
 				StatusCode: http.StatusInternalServerError,
@@ -76,6 +79,7 @@ func (p *BannerService) GetBanner(tagId, featureId, limit, offset int32) ([]mode
 
 	res, err := p.repo.GetBanner(tagId, featureId, limit, offset, nil)
 	if err != nil {
+		p.logger.Err.Println(consts.ErrorGettingBanner, err.Error())
 		return nil, sErr.ServerError{
 			Message:    consts.ErrorGettingBanner,
 			StatusCode: http.StatusInternalServerError,
@@ -104,6 +108,7 @@ func (p *BannerService) DeleteBanner(id int32) error {
 				StatusCode: http.StatusNotFound,
 			}
 		} else {
+			p.logger.Err.Println(consts.ErrorDeletingBanner, err.Error())
 			return sErr.ServerError{
 				Message:    consts.ErrorDeletingBanner,
 				StatusCode: http.StatusInternalServerError,
@@ -134,6 +139,7 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 			}
 		}
 
+		p.logger.Err.Println(consts.ErrorGettingBanner, err.Error())
 		return sErr.ServerError{
 			Message:    consts.ErrorGettingBanner,
 			StatusCode: http.StatusInternalServerError,
@@ -164,6 +170,8 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 
 		_, err = p.repo.CreateBanner(oldBanner)
 		if err != nil {
+			p.logger.Err.Println(consts.ErrorUpdatingBanner, err.Error())
+
 			return sErr.ServerError{
 				Message:    consts.ErrorUpdatingBanner,
 				StatusCode: http.StatusInternalServerError,
@@ -181,6 +189,7 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 	}
 
 	if err != nil {
+		p.logger.Err.Println(consts.ErrorUpdatingStatus, err.Error())
 		return sErr.ServerError{
 			Message:    consts.ErrorUpdatingStatus,
 			StatusCode: http.StatusInternalServerError,
@@ -217,7 +226,7 @@ func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLa
 
 		cachedBanner, err := p.cache.Get(tagId, featureId)
 		if err != nil {
-			// TODO: Не нарушаем работу программы, нужно логгировать об ошибке
+			p.logger.Err.Println(consts.ErrorGetCache, err.Error())
 		}
 		banner = cachedBanner
 	}
@@ -225,6 +234,8 @@ func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLa
 	if banner.Id == 0 || banner.IsActive != nil && !*banner.IsActive && role != consts.AdminRole { // Banner there are not in cache
 		banners, err := p.repo.GetBanner(tagId, featureId, 1, 0, isActive)
 		if err != nil {
+
+			p.logger.Err.Println(consts.ErrorGettingBanner, err.Error())
 			return models.Banner{}, sErr.ServerError{
 				Message:    consts.ErrorGettingBanner,
 				StatusCode: http.StatusInternalServerError,
@@ -241,7 +252,7 @@ func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLa
 		banner = banners[0]
 
 		if err := p.cache.Set(banner); err != nil {
-			// TODO: Не нарушаем работу программы, нужно логгировать об ошибке
+			p.logger.Err.Println(consts.ErrorSetCache, err.Error())
 		}
 	}
 
@@ -259,6 +270,8 @@ func (p *BannerService) GetBannerVersions(id int32) ([]models.Banner, error) {
 
 	banners, err := p.repo.GetBannersById(id, false)
 	if err != nil {
+		p.logger.Err.Println(consts.ErrorGettingBanner, err.Error())
+
 		return nil, sErr.ServerError{
 			Message:    consts.ErrorGettingBanner,
 			StatusCode: http.StatusInternalServerError,
@@ -299,6 +312,7 @@ func (p *BannerService) SetBannerVersion(id, version int32) error {
 				StatusCode: http.StatusBadRequest,
 			}
 		}
+		p.logger.Err.Println(consts.ErrrorUpdatingActiveVersion, err.Error())
 		return sErr.ServerError{
 			Message:    consts.ErrrorUpdatingActiveVersion,
 			StatusCode: http.StatusInternalServerError,

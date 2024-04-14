@@ -19,4 +19,7 @@ const (
 	ErrorWrongVersion   = "Bad Request: wrong version value"
 
 	ErrorNoRowsAffected = "error: No rows affected"
+
+	ErrorGetCache = "Error with getting from cache"
+	ErrorSetCache = "Error with setting to cache"
 )
