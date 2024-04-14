@@ -12,8 +12,8 @@
 
 ## Запуск
 Все команды описаны в Makefile:
-- `make docker.start.components` - Запуск всей контейнеров
-- `test.integration` - Запуск интеграционных тестов
+- `make docker.start.components` - Запуск всех контейнеров
+- `test.integrations` - Запуск интеграционных тестов
 
 Для тестирования API использовался *Postman*. Все endpoint'ы описаны в данной 
 [коллекции](https://www.postman.com/joint-operations-operator-99149269/workspace/banner-service/collection/28284200-aea595ab-78ed-4fd8-8ba7-7cf0148ac5c3?action=share&creator=28284200&active-environment=28284200-59b311d7-fdb3-4d47-bf6f-489278018443).\
