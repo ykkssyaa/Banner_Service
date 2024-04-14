@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"net/http"
 )
 
@@ -226,7 +227,10 @@ func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLa
 
 		cachedBanner, err := p.cache.Get(tagId, featureId)
 		if err != nil {
-			p.logger.Err.Println(consts.ErrorGetCache, err.Error())
+			if !errors.Is(err, redis.Nil) {
+				p.logger.Err.Println(consts.ErrorGetCache, err.Error())
+
+			}
 		}
 		banner = cachedBanner
 	}
