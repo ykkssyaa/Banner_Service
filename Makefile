@@ -4,10 +4,10 @@ docker.start.components:
 	docker compose up -d
 
 docker.rebuild.components:
-	docker-compose up -d --build app
+	docker compose up -d --build app
 
 docker.stop:
-	docker-compose down
+	docker compose down
 
 migrate.up:
 	migrate -path ./migrations -database "postgres://yks:yksadm@localhost:5432/postgres?sslmode=disable" up
