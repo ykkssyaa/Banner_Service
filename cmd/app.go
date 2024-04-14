@@ -6,10 +6,14 @@ import (
 	"BannerService/internal/server"
 	"BannerService/internal/service"
 	lg "BannerService/pkg/logger"
+	"context"
 	"errors"
 	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -54,7 +58,28 @@ func main() {
 
 	logger.Info.Print("Starting the server on port: " + port + "\n\n")
 
-	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		logger.Err.Fatalf("error occured while running http server: \"%s\" \n", err.Error())
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Err.Fatalf("error occured while running http server: \"%s\" \n", err.Error())
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+
+	logger.Info.Println("Server Shutting Down.")
+
+	if err = srv.Shutdown(context.Background()); err != nil {
+		logger.Err.Fatalf("error occured while server shutting down: \"%s\" \n", err.Error())
+	}
+
+	logger.Info.Println("DB connection closing.")
+	if err := db.Close(); err != nil {
+		logger.Err.Fatalf("error occured on db connection close: \"%s\" \n", err.Error())
+	}
+	logger.Info.Println("Redis connection closing.")
+	if err := redisCl.Close(); err != nil {
+		logger.Err.Fatalf("error occured on redis connection close: \"%s\" \n", err.Error())
 	}
 }
