@@ -37,7 +37,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER check_unique_feature_tags_trigger_update
+CREATE OR REPLACE TRIGGER check_unique_feature_tags_trigger_update
 BEFORE UPDATE OF feature_id ON banners
 FOR EACH ROW
 EXECUTE FUNCTION check_unique_feature_tags_update();

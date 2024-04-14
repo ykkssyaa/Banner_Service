@@ -9,6 +9,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - banner
 
 
   postgres:
@@ -22,12 +24,28 @@ services:
     ports:
       - ${POSTGRES_PORT}:${POSTGRES_PORT}
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: [ "CMD-SHELL", "pg_isready -d postgres -U yks" ]
       interval: 3s
       timeout: 5s
-      retries: 5
+      retries: 10
     volumes:
       - ./data:/var/lib/postgresql/data
+    networks:
+      banner:
+        aliases:
+          - database
+
+  migrate:
+    image: migrate/migrate
+    container_name: banner_migrate
+    volumes:
+      - ./migrations:/migrations
+    command: ["-path", "./migrations", "-database",  "postgres://yks:yksadm@database:5432/postgres?sslmode=disable", "up" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - banner
 
   redis:
     image: redis:7.2
@@ -46,3 +64,11 @@ services:
       interval: 1s
       timeout: 3s
       retries: 30
+    networks:
+      banner:
+        aliases:
+          - redis
+
+
+networks:
+  banner:
