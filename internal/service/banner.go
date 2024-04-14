@@ -31,25 +31,25 @@ func (p *BannerService) CreateBanner(banner models.Banner) (int, error) {
 			// Handling violation of sql constraint (unique)
 			if pqErr.Code == "23505" {
 				return 0, sErr.ServerError{
-					Message:    "tags_ids has duplicates",
+					Message:    consts.ErrorTagIdsDuplicates,
 					StatusCode: http.StatusBadRequest,
 				}
 				// Handling violation of sql constraint (foreign key)
 			} else if pqErr.Code == "23503" {
 				return 0, sErr.ServerError{
-					Message:    "Reference to a non-existent object(tag or feature)",
+					Message:    consts.ErrorNonExistentObject,
 					StatusCode: http.StatusBadRequest,
 				}
 				// Handling violation of sql constraint (uniq feature and tag trigger)
-			} else if pqErr.Message == "Tag already exists for this banner and feature." {
+			} else if pqErr.Message == consts.ErrorBannerWithTagAndFeatureExist {
 				return 0, sErr.ServerError{
-					Message:    "Tag already exists for this banner and feature",
+					Message:    consts.ErrorBannerWithTagAndFeatureExist,
 					StatusCode: http.StatusBadRequest,
 				}
 			}
 		} else {
 			return 0, sErr.ServerError{
-				Message:    "Error with creating banner",
+				Message:    consts.ErrorCreatingBanner,
 				StatusCode: http.StatusInternalServerError,
 			}
 		}
@@ -77,7 +77,7 @@ func (p *BannerService) GetBanner(tagId, featureId, limit, offset int32) ([]mode
 	res, err := p.repo.GetBanner(tagId, featureId, limit, offset, nil)
 	if err != nil {
 		return nil, sErr.ServerError{
-			Message:    "Error with getting banner",
+			Message:    consts.ErrorGettingBanner,
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
@@ -90,7 +90,7 @@ func (p *BannerService) DeleteBanner(id int32) error {
 
 	if id <= 0 {
 		return sErr.ServerError{
-			Message:    "Bad Request: wrong id value",
+			Message:    consts.ErrorWrongId,
 			StatusCode: http.StatusBadRequest,
 		}
 	}
@@ -98,14 +98,14 @@ func (p *BannerService) DeleteBanner(id int32) error {
 	err := p.repo.DeleteBanner(id)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if err.Error() == consts.ErrorNoRowsAffected {
 			return sErr.ServerError{
 				Message:    "",
 				StatusCode: http.StatusNotFound,
 			}
 		} else {
 			return sErr.ServerError{
-				Message:    "Error with deleting banner",
+				Message:    consts.ErrorDeletingBanner,
 				StatusCode: http.StatusInternalServerError,
 			}
 		}
@@ -118,7 +118,7 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 
 	if banner.Id <= 0 {
 		return sErr.ServerError{
-			Message:    "Bad Request: wrong id value",
+			Message:    consts.ErrorWrongId,
 			StatusCode: http.StatusBadRequest,
 		}
 	}
@@ -127,7 +127,7 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 	oldBanner := banners[0]
 	if err != nil {
 
-		if err.Error() == "sql: no rows in result set" {
+		if errors.Is(err, sql.ErrNoRows) {
 			return sErr.ServerError{
 				Message:    "",
 				StatusCode: http.StatusNotFound,
@@ -135,7 +135,7 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 		}
 
 		return sErr.ServerError{
-			Message:    "Error with getting banner",
+			Message:    consts.ErrorGettingBanner,
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
@@ -165,7 +165,7 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 		_, err = p.repo.CreateBanner(oldBanner)
 		if err != nil {
 			return sErr.ServerError{
-				Message:    "Error with updating ",
+				Message:    consts.ErrorUpdatingBanner,
 				StatusCode: http.StatusInternalServerError,
 			}
 		}
@@ -182,7 +182,7 @@ func (p *BannerService) PatchBanner(banner models.Banner) error {
 
 	if err != nil {
 		return sErr.ServerError{
-			Message:    "Error with updating is_active status",
+			Message:    consts.ErrorUpdatingStatus,
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
@@ -194,13 +194,13 @@ func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLa
 
 	if tagId <= 0 {
 		return models.Banner{}, sErr.ServerError{
-			Message:    "Bad Request: wrong tag_id value",
+			Message:    consts.ErrorWrongTagId,
 			StatusCode: http.StatusBadRequest,
 		}
 	}
 	if featureId <= 0 {
 		return models.Banner{}, sErr.ServerError{
-			Message:    "Bad Request: wrong feature_id value",
+			Message:    consts.ErrorWrongFeatureId,
 			StatusCode: http.StatusBadRequest,
 		}
 	}
@@ -222,11 +222,11 @@ func (p *BannerService) GetUserBanner(tagId, featureId int32, role string, useLa
 		banner = cachedBanner
 	}
 
-	if banner.Id == 0 { // Banner there are not in cache
+	if banner.Id == 0 || banner.IsActive != nil && !*banner.IsActive && role != consts.AdminRole { // Banner there are not in cache
 		banners, err := p.repo.GetBanner(tagId, featureId, 1, 0, isActive)
 		if err != nil {
 			return models.Banner{}, sErr.ServerError{
-				Message:    "Error with getting banner",
+				Message:    consts.ErrorGettingBanner,
 				StatusCode: http.StatusInternalServerError,
 			}
 		}
@@ -252,7 +252,7 @@ func (p *BannerService) GetBannerVersions(id int32) ([]models.Banner, error) {
 
 	if id <= 0 {
 		return nil, sErr.ServerError{
-			Message:    "Bad Request: wrong id value",
+			Message:    consts.ErrorWrongId,
 			StatusCode: http.StatusBadRequest,
 		}
 	}
@@ -260,7 +260,7 @@ func (p *BannerService) GetBannerVersions(id int32) ([]models.Banner, error) {
 	banners, err := p.repo.GetBannersById(id, false)
 	if err != nil {
 		return nil, sErr.ServerError{
-			Message:    "Error with getting banners",
+			Message:    consts.ErrorGettingBanner,
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
@@ -278,14 +278,14 @@ func (p *BannerService) SetBannerVersion(id, version int32) error {
 
 	if id <= 0 {
 		return sErr.ServerError{
-			Message:    "Bad Request: wrong id value",
+			Message:    consts.ErrorWrongId,
 			StatusCode: http.StatusBadRequest,
 		}
 	}
 
 	if version <= 0 {
 		return sErr.ServerError{
-			Message:    "Bad Request: wrong version value",
+			Message:    consts.ErrorWrongVersion,
 			StatusCode: http.StatusBadRequest,
 		}
 	}
@@ -293,14 +293,14 @@ func (p *BannerService) SetBannerVersion(id, version int32) error {
 	err := p.repo.SetActiveVersion(id, version, true)
 
 	if err != nil {
-		if err.Error() == "error: No rows affected" {
+		if err.Error() == consts.ErrorNoRowsAffected {
 			return sErr.ServerError{
-				Message:    "Bad Request: there is not banner with this id and version",
+				Message:    consts.ErrorHasNoBanner,
 				StatusCode: http.StatusBadRequest,
 			}
 		}
 		return sErr.ServerError{
-			Message:    "Internal server error with updating active version",
+			Message:    consts.ErrrorUpdatingActiveVersion,
 			StatusCode: http.StatusInternalServerError,
 		}
 	}

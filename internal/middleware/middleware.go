@@ -30,14 +30,14 @@ func TokenMiddleware(allowedRoles ...string) func(http.Handler) http.Handler {
 			token := r.Header.Get("token")
 
 			if token == "" {
-				http.Error(w, consts.ErrorUnauthorized, http.StatusUnauthorized)
+				http.Error(w, "", http.StatusUnauthorized)
 				return
 
 			} else {
 				role := ParseRole(token)
 
 				if !CheckRoles(role, allowedRoles...) {
-					http.Error(w, consts.ErrorForbidden, http.StatusForbidden)
+					http.Error(w, "", http.StatusForbidden)
 					return
 				}
 
