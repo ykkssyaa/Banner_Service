@@ -2,12 +2,13 @@ package tests
 
 import (
 	"BannerService/internal/gateway"
+	"BannerService/internal/models"
 	"BannerService/internal/server"
 	"BannerService/internal/service"
 	"context"
 	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
-	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"net/http"
 	"os"
@@ -48,17 +49,25 @@ func TestAPISuite(t *testing.T) {
 
 func (s *APITestSuite) SetupTest() {
 
+	_, err := s.db.Exec("DELETE FROM banners")
+	assert.NoError(s.T(), err)
+
+	err = s.populateDB(banners...)
+	assert.NoError(s.T(), err)
+
+	err = s.cache.FlushAll(context.Background()).Err()
+	assert.NoError(s.T(), err)
 }
 
 func (s *APITestSuite) SetupSuite() {
 	db, err := gateway.NewPostgresDB(dbURI)
 	if err != nil {
-		print(dbURI)
+		println(dbURI)
 		s.FailNow("Failed to connect to postgres", err)
 	}
 	s.db = db
 
-	print(redisURI)
+	println(redisURI)
 	cache := redis.NewClient(&redis.Options{
 		Addr:     redisURI,
 		Password: "", // no password set
@@ -71,16 +80,12 @@ func (s *APITestSuite) SetupSuite() {
 	s.cache = cache
 
 	s.initDeps()
-
-	if err := s.populateDB(); err != nil {
-		s.FailNow("Failed to populate DB", err)
-	}
 }
 
 func (s *APITestSuite) initDeps() {
 	gateways := gateway.NewGateway(s.db, s.cache, true)
 	services := service.NewService(gateways)
-	port := viper.GetString("TEST_PORT")
+	port := os.Getenv("TEST_PORT")
 
 	s.server = server.NewHttpServer(":"+port, services)
 	s.services = services
@@ -104,7 +109,26 @@ func (s *APITestSuite) HandleRequests() {
 
 }
 
-func (s *APITestSuite) populateDB() error {
+func (s *APITestSuite) populateDB(data ...models.Banner) error {
+	for _, banner := range data {
+
+		createQuery := "INSERT INTO banners (id, version, feature_id, content, is_active, created_at, update_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+
+		_, err := s.db.Exec(createQuery, banner.Id, banner.Version, banner.FeatureId,
+			banner.Content, banner.IsActive, banner.CreatedAt, banner.UpdatedAt)
+		if err != nil {
+			return err
+		}
+
+		createTagsRelQuery := "INSERT INTO tags_banners (banner_id, banner_version, tag_id) VALUES ($1, $2, $3)"
+		for _, tagId := range banner.TagIds {
+			if _, err := s.db.Exec(createTagsRelQuery, banner.Id, banner.Version, tagId); err != nil {
+				return err
+			}
+		}
+
+	}
+
 	return nil
 }
 

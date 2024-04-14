@@ -6,10 +6,16 @@ docker.start.components:
 docker.rebuild.components:
 	docker-compose up -d --build app
 
-# shutting down docker components
 docker.stop:
 	docker-compose down
 
+migrate.up:
+	migrate -path ./migrations -database "postgres://yks:yksadm@localhost:5432/postgres?sslmode=disable" up
+
+migrate.down:
+	migrate -path ./migrations -database "postgres://yks:yksadm@localhost:5432/postgres?sslmode=disable" down
+
+export TEST_PORT=8090
 export TEST_REDIS_URI=localhost:6376
 export TEST_DB_URI=postgres://yks:yksadm@localhost:5434/postgres?sslmode=disable
 
@@ -21,7 +27,7 @@ test.integration:
 
 	migrate -path ./migrations -database "postgres://yks:yksadm@localhost:5434/postgres?sslmode=disable" up
 
-	go test -v ./tests/
+	go test -v ./tests/ || (docker stop test_db && docker stop test_redis && exit 1)
 
 	docker stop test_db
 	docker stop test_redis
